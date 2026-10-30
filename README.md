@@ -54,18 +54,17 @@ predictive pacing and call allocation.
 
 ```mermaid
 flowchart LR
-    Operator[Operations user] --> UI[React dashboard]
-    UI -->|Vite proxy: /api| API[FastAPI routes]
-    API --> Dialing[Progressive / predictive dialer]
-    Dialing -->|predictive proposal| Safety[Safety Controller]
-    Safety -->|approved capacity| Allocator[Call allocator]
-    Dialing -->|progressive proposal| Safety
-    Allocator --> Provider[Mock telecom providers]
-    Provider --> Events[Provider event processor]
-    Events --> DB[(SQLite via SQLAlchemy)]
-    API --> Services[Eligibility, analytics, recovery, simulation]
+    Operator["Operations user"] --> UI["React dashboard"]
+    UI -->|"Vite proxy: /api"| API["FastAPI routes"]
+    API --> Dialing["Progressive and predictive dialers"]
+    Dialing -->|"pacing proposal"| Safety["Safety Controller"]
+    Safety -->|"approved capacity"| Allocator["Call allocator"]
+    Allocator --> Provider["Mock telecom providers"]
+    Provider --> Events["Provider event processor"]
+    Events --> DB[("SQLite")]
+    API --> Services["Eligibility, analytics, recovery, simulation"]
     Services --> DB
-    CSV[Optional local CSV dataset] --> Ingestion[CSV ingestion pipeline]
+    CSV["Optional local CSV dataset"] --> Ingestion["CSV ingestion pipeline"]
     Ingestion --> DB
 ```
 
@@ -156,7 +155,6 @@ for local placement details. Do not substitute real borrower information.
 ├── .env.example
 ├── .gitignore
 ├── README.md
-├── INTERVIEW_PREPARATION.md
 ├── backend/
 │   ├── app/                 # API, models, schemas, providers, services
 │   ├── data/                # Local-only runtime data; dataset/database ignored
@@ -292,23 +290,27 @@ elsewhere.
 
 ## Screenshots
 
-Screenshots are not included yet. Add reviewed, synthetic-data-only captures
-here before publishing if visual examples are desired.
+Screenshots are not included. Capture and review these views with synthetic
+data before publishing:
+
+- Dashboard overview with populated metrics and charts.
+- Campaign operations and dialing controls.
+- Provider health and Safety Controller status.
+- Simulation results and analytics.
 
 ## Future improvements
 
-- Add authentication, authorization, and role-based access.
+- Add role-based access controls before exposing operational endpoints.
 - Move shared provider/circuit-breaker state to a durable store for
   multi-worker deployments.
 - Consider PostgreSQL for production-scale concurrent writes.
 - Move long-running simulations to a background job system.
 - Add monitoring, deployment configuration, and compliance review before any
   real-world use.
-- Add authentication/authorization and database migrations before deployment.
+- Add database migrations before deployment.
 
 ## Documentation
 
-- [Interview preparation](INTERVIEW_PREPARATION.md)
 - [Dataset analysis](docs/dataset_analysis.md)
 - [Requirements checklist](docs/requirements_checklist.md)
 - [Local data setup](backend/data/README.md)

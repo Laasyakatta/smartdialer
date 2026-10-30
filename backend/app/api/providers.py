@@ -32,6 +32,8 @@ def toggle_outage(provider_name: str, payload: OutageToggleRequest):
 
 @router.post("/{provider_name}/reset-circuit")
 def reset_circuit(provider_name: str):
+    if provider_name not in ("mock_a", "mock_b"):
+        raise HTTPException(status_code=404, detail="Provider not found")
     cb = get_circuit_breaker(provider_name)
     cb.reset()
     return {"provider": provider_name, "circuit_state": cb.state.value}

@@ -82,14 +82,23 @@ class CallAllocator:
         borrower = db.get(Borrower, borrower_id)
         phone = borrower.phone if borrower else "9999999999"
 
-        telecom_resp = provider.initiate_call(call_id, phone)
+        try:
+            telecom_resp = provider.initiate_call(call_id, phone)
+        except Exception as ex:
+            logger.error(
+                "Provider initiation raised for call %s (%s)",
+                call_id,
+                type(ex).__name__
+            )
+            telecom_resp = {"success": False, "error": "PROVIDER_INITIATION_ERROR"}
 
-        if not telecom_resp["success"]:
+        if not telecom_resp.get("success", False):
             # Provider initiation failed!
             cb.record_failure()
-            logger.error(f"Telecom carrier failed initiation for {call_id}: {telecom_resp['error']}")
+            error_reason = str(telecom_resp.get("error") or "PROVIDER_INITIATION_ERROR")[:100]
+            logger.error("Telecom carrier failed initiation for call %s (%s)", call_id, error_reason)
             
-            CallStateMachine.transition(db, call, CallState.FAILED, reason=telecom_resp["error"])
+            CallStateMachine.transition(db, call, CallState.FAILED, reason=error_reason)
             AgentStateMachine.release_agent(db, agent.agent_id)
             EligibilityService.release_borrower(db, borrower_id)
             allocation.status = "FAILED"

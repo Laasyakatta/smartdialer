@@ -3,8 +3,8 @@ Simulation Pydantic Schemas
 """
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, field_validator
+from typing import Optional, List, Literal
+from pydantic import BaseModel, Field, field_validator
 
 
 VALID_SCENARIOS = ["Scenario A", "Scenario B", "Scenario C", "Scenario D"]
@@ -13,9 +13,9 @@ VALID_SCENARIOS = ["Scenario A", "Scenario B", "Scenario C", "Scenario D"]
 class SimulationRunRequest(BaseModel):
     scenario: str = "Scenario A"
     dialing_mode: str = "PROGRESSIVE"
-    agent_count: int = 30
-    cycles: int = 4
-    provider_name: str = "mock_a"
+    agent_count: int = Field(default=30, ge=1, le=500)
+    cycles: int = Field(default=4, ge=1, le=20)
+    provider_name: Literal["mock_a", "mock_b"] = "mock_a"
     seed: int = 42
 
     @field_validator("scenario")
@@ -32,20 +32,6 @@ class SimulationRunRequest(BaseModel):
         if v_up not in ("PROGRESSIVE", "PREDICTIVE"):
             raise ValueError("dialing_mode must be 'PROGRESSIVE' or 'PREDICTIVE'")
         return v_up
-
-    @field_validator("agent_count")
-    @classmethod
-    def validate_agent_count(cls, v: int) -> int:
-        if not 1 <= v <= 500:
-            raise ValueError("agent_count must be between 1 and 500")
-        return v
-
-    @field_validator("cycles")
-    @classmethod
-    def validate_cycles(cls, v: int) -> int:
-        if not 1 <= v <= 20:
-            raise ValueError("cycles must be between 1 and 20")
-        return v
 
 
 class SimulationRunResponse(BaseModel):

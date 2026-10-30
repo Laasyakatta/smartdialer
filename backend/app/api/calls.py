@@ -4,21 +4,16 @@ Call Monitoring & Trigger API Router
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, desc
-from pydantic import BaseModel
+import logging
 
 from backend.app.core.database import get_db
 from backend.app.models.call import Call
 from backend.app.services.progressive_dialer import ProgressiveDialerService
 from backend.app.services.predictive_dialer import PredictiveDialerService
+from backend.app.schemas.call import TriggerDialRequest
 
 router = APIRouter(prefix="/calls", tags=["calls"])
-
-class TriggerDialRequest(BaseModel):
-    campaign_id: str
-    provider_name: str = "mock_a"
-    batch_size: int = 10
-    answer_probability: float = 0.20
-    talk_time_sec: int = 60
+logger = logging.getLogger("smartdialer.api.calls")
 
 @router.get("")
 def list_calls(
@@ -34,13 +29,12 @@ def list_calls(
     if is_simulation is not None:
         query = query.where(Call.is_simulation == is_simulation)
 
-    total = db.scalar(
-        select(func.count(Call.call_id))
-        .where(
-            Call.state == state.upper() if state else True,
-            Call.is_simulation == is_simulation if is_simulation is not None else True
-        )
-    ) or 0
+    count_query = select(func.count(Call.call_id))
+    if state:
+        count_query = count_query.where(Call.state == state.upper())
+    if is_simulation is not None:
+        count_query = count_query.where(Call.is_simulation == is_simulation)
+    total = db.scalar(count_query) or 0
 
     calls = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
 
@@ -81,7 +75,8 @@ def trigger_progressive_dial(payload: TriggerDialRequest, db: Session = Depends(
         )
         return res
     except Exception as ex:
-        raise HTTPException(status_code=500, detail=str(ex))
+        logger.exception("Progressive dial cycle failed for campaign %s", payload.campaign_id)
+        raise HTTPException(status_code=500, detail="Unable to complete progressive dial cycle") from ex
 
 @router.post("/dial/predictive")
 def trigger_predictive_dial(payload: TriggerDialRequest, db: Session = Depends(get_db)):
@@ -95,4 +90,5 @@ def trigger_predictive_dial(payload: TriggerDialRequest, db: Session = Depends(g
         )
         return res
     except Exception as ex:
-        raise HTTPException(status_code=500, detail=str(ex))
+        logger.exception("Predictive dial cycle failed for campaign %s", payload.campaign_id)
+        raise HTTPException(status_code=500, detail="Unable to complete predictive dial cycle") from ex

@@ -3,30 +3,16 @@ Call Pydantic Schemas
 """
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, field_validator
+from typing import Optional, List, Literal
+from pydantic import BaseModel, Field
 
 
 class TriggerDialRequest(BaseModel):
-    campaign_id: str
-    provider_name: str = "mock_a"
-    batch_size: int = 10
-    answer_probability: float = 0.20
-    talk_time_sec: int = 60
-
-    @field_validator("provider_name")
-    @classmethod
-    def validate_provider(cls, v: str) -> str:
-        if v not in ("mock_a", "mock_b"):
-            raise ValueError("provider_name must be 'mock_a' or 'mock_b'")
-        return v
-
-    @field_validator("answer_probability")
-    @classmethod
-    def validate_probability(cls, v: float) -> float:
-        if not 0.0 <= v <= 1.0:
-            raise ValueError("answer_probability must be between 0.0 and 1.0")
-        return v
+    campaign_id: str = Field(min_length=1, max_length=50)
+    provider_name: Literal["mock_a", "mock_b"] = "mock_a"
+    batch_size: int = Field(default=10, ge=1, le=100)
+    answer_probability: float = Field(default=0.20, ge=0.0, le=1.0)
+    talk_time_sec: int = Field(default=60, ge=1, le=3600)
 
 
 class CallResponse(BaseModel):

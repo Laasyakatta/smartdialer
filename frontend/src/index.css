@@ -721,3 +721,18 @@ code { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
 .font-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .w-full { width: 100%; }
+
+@media (max-width: 700px) {
+  :root { --sidebar-width: 64px; }
+
+  .page-content { padding: 16px; }
+  .header { padding: 0 16px; }
+  .sidebar-brand { padding: 16px 8px; }
+  .sidebar-logo { justify-content: center; }
+  .sidebar-logo-text, .sidebar-logo-sub { display: none; }
+  .sidebar-section-label { font-size: 0; padding: 8px 0 4px; }
+  .sidebar-link { justify-content: center; padding: 10px 6px; }
+  .sidebar-link > span:not(:first-child) { display: none; }
+  .sidebar-footer { padding: 12px 8px; }
+  .backend-status { justify-content: center; font-size: 0; }
+}

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # SmartDialer
 
 SmartDialer is a full-stack hiring assignment that demonstrates a collections
@@ -70,6 +69,45 @@ flowchart LR
     Ingestion --> DB
 ```
 
+### Backend request flow
+
+```mermaid
+sequenceDiagram
+    actor Operator
+    participant UI as React UI
+    participant API as FastAPI route
+    participant Service as Domain service
+    participant DB as SQLite
+    Operator->>UI: Submit action or filter
+    UI->>API: JSON request /api/...
+    API->>API: Pydantic validation
+    API->>Service: Call use case
+    Service->>DB: Read/write through SQLAlchemy
+    DB-->>Service: Result
+    Service-->>API: Result or domain error
+    API-->>UI: JSON response
+    UI-->>Operator: Updated status, data, or error
+```
+
+### Dialing workflow
+
+```mermaid
+flowchart TD
+    Start[Campaign cycle requested] --> Pace{Dialing mode}
+    Pace -->|Progressive| Capacity[Request up to available agent capacity]
+    Pace -->|Predictive| Predict[Calculate pacing proposal]
+    Predict --> Safety[Independent Safety Controller]
+    Capacity --> Safety
+    Safety -->|Reject / zero| Stop[Return without placing calls]
+    Safety -->|Fallback| Capacity
+    Safety -->|Approve / reduce| Reserve[Atomically reserve agents]
+    Reserve --> Borrower[Atomically reserve eligible borrower]
+    Borrower --> Allocate[Create call allocation]
+    Allocate --> Provider[Initiate provider call]
+    Provider --> Events[Persist and process provider events]
+    Events --> Release[Release agent and borrower at terminal state]
+```
+
 ### Progressive dialing
 
 `ProgressiveDialerService` checks available agents and campaign-eligible
@@ -135,9 +173,19 @@ for local placement details. Do not substitute real borrower information.
     └── src/
 ```
 
+## Database design
+
+SQLAlchemy models cover agents, borrowers, accounts, campaigns, daily targeting,
+calls and allocations, provider events, simulation runs, and collection-history
+records. The local SQLite engine enables WAL, foreign-key checks, and a busy
+timeout. Tables are created with SQLAlchemy `create_all` at startup; this
+prototype does not yet include schema migrations. Borrower contact fields are
+treated as sensitive and generated databases/dataset files are excluded from
+Git. Do not load real borrower data into a public or shared environment.
+
 ## Installation
 
-Requirements: Python 3.11 or newer, Node.js/npm, and Git.
+Requirements: Python 3.11 or newer, Node.js 22.12 or newer, npm, and Git.
 
 ### Backend
 
@@ -206,8 +254,41 @@ npm ci
 npm run build
 ```
 
-The frontend package currently defines development, build, and preview scripts;
-it does not define a frontend test script.
+Run the frontend unit tests with:
+
+```powershell
+Set-Location frontend
+npm test
+```
+
+## API endpoint overview
+
+The interactive, authoritative schema is available at `/docs`. The main
+endpoints are:
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/health` | Service health |
+| GET | `/api/kpis` | Dashboard summary metrics |
+| GET/POST | `/api/agents` and `/api/agents/{agent_id}/status` | List and update agent state |
+| POST | `/api/agents/disconnect-batch` | Simulate agent disconnection |
+| GET | `/api/borrowers` | List eligible borrower records |
+| GET | `/api/campaigns` | List campaigns |
+| POST | `/api/campaigns/{campaign_id}/start`, `/pause`, `/mode` | Update campaign operation |
+| GET | `/api/calls` | List call records |
+| POST | `/api/calls/dial/progressive`, `/api/calls/dial/predictive` | Run one dialing cycle |
+| GET/POST | `/api/providers` and `/api/providers/{provider_name}/outage` | Inspect and inject provider outage |
+| POST | `/api/providers/{provider_name}/reset-circuit` | Reset provider circuit breaker |
+| GET | `/api/safety/status` | Read current safety diagnostics |
+| GET/POST | `/api/simulation/scenarios`, `/api/simulation/run` | List and run simulations |
+| GET | `/api/simulation/history` | List saved simulation results |
+| GET | `/api/analytics/campaigns`, `/api/analytics/vendors`, `/api/analytics/dispositions` | Analytics summaries |
+
+This local assignment prototype does not implement authentication or
+authorization. Keep it bound to a trusted local network; do not expose its
+control endpoints publicly. CORS is restricted to local Vite origins by
+default; set `CORS_ORIGINS` to a comma-separated allowlist when hosting the UI
+elsewhere.
 
 ## Screenshots
 
@@ -217,15 +298,13 @@ here before publishing if visual examples are desired.
 ## Future improvements
 
 - Add authentication, authorization, and role-based access.
-- Replace permissive development CORS settings with explicit deployment
-  origins.
 - Move shared provider/circuit-breaker state to a durable store for
   multi-worker deployments.
 - Consider PostgreSQL for production-scale concurrent writes.
 - Move long-running simulations to a background job system.
-- Add frontend automated tests and richer dashboard loading/empty states.
 - Add monitoring, deployment configuration, and compliance review before any
   real-world use.
+- Add authentication/authorization and database migrations before deployment.
 
 ## Documentation
 
@@ -233,6 +312,3 @@ here before publishing if visual examples are desired.
 - [Dataset analysis](docs/dataset_analysis.md)
 - [Requirements checklist](docs/requirements_checklist.md)
 - [Local data setup](backend/data/README.md)
-=======
-# smartdialer
->>>>>>> f2e827e95449e692dcacb7e51871bf1963191128

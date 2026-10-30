@@ -49,7 +49,7 @@ export default function Sidebar() {
   return (
     <nav className="sidebar">
       <div className="sidebar-brand">
-        <NavLink to="/" className="sidebar-logo">
+        <NavLink to="/" className="sidebar-logo" aria-label="SmartDialer home">
           <div className="sidebar-logo-icon">📞</div>
           <div>
             <div className="sidebar-logo-text">SmartDialer</div>
@@ -67,6 +67,7 @@ export default function Sidebar() {
                 key={link.to}
                 to={link.to}
                 end={link.to === '/'}
+                aria-label={link.label}
                 className={({ isActive }) =>
                   'sidebar-link' + (isActive ? ' active' : '')
                 }

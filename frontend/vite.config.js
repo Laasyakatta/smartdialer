@@ -20,5 +20,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-  }
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+    restoreMocks: true,
+  },
 })

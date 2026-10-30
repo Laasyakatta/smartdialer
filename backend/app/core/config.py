@@ -2,8 +2,6 @@
 Application Configuration
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
-import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -11,6 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 class Settings(BaseSettings):
     PROJECT_NAME: str = "SmartDialer"
     API_V1_STR: str = "/api"
+    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     
     # Database
     DATABASE_PATH: Path = BASE_DIR / "data" / "smartdialer.db"

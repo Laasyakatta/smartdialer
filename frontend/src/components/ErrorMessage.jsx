@@ -1,10 +1,10 @@
 export default function ErrorMessage({ message, onRetry }) {
   return (
-    <div className="error-box">
+    <div className="error-box" role="alert">
       <span>⚠</span>
       <span>{message || 'An error occurred.'}</span>
       {onRetry && (
-        <button className="btn btn-ghost btn-sm" onClick={onRetry} style={{ marginLeft: 'auto' }}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onRetry} style={{ marginLeft: 'auto' }}>
           Retry
         </button>
       )}

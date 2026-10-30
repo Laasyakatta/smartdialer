@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from backend.app.models.enums import (
     CallState,
@@ -72,7 +73,23 @@ class EventProcessor:
             status=ProviderEventStatus.RECEIVED.value
         )
         db.add(event_record)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            duplicate = db.scalar(
+                select(ProviderEvent)
+                .where(ProviderEvent.provider_event_id == provider_event_id)
+            )
+            if duplicate is None:
+                raise
+            logger.info("Concurrent duplicate event %s ignored", provider_event_id)
+            return {
+                "status": "DROPPED_DUPLICATE",
+                "call_id": call_id,
+                "event_type": event_type,
+                "message": "Duplicate event ID ignored"
+            }
         db.refresh(event_record)
 
         # 2. Step 2: Retrieve Call entity

@@ -36,10 +36,12 @@ async def lifespan(app: FastAPI):
     # Startup reconciliation: Clean up any stale reservations from prior abnormal termination
     db = SessionLocal()
     try:
-        reconciled = RecoveryService.reconcile_stale_reservations(db, timeout_seconds=10)
-        logger.info(f"Startup crash recovery complete: {reconciled}")
-    except Exception as ex:
-        logger.error(f"Startup recovery encountered issue: {ex}")
+        reconciled = RecoveryService.reconcile_stale_reservations(
+            db, timeout_seconds=settings.STALE_RESERVATION_TIMEOUT_SEC
+        )
+        logger.info("Startup crash recovery complete: %s", reconciled)
+    except Exception:
+        logger.exception("Startup recovery encountered an issue")
     finally:
         db.close()
         
@@ -56,8 +58,8 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

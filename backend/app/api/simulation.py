@@ -4,21 +4,15 @@ Simulation API Router
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select, desc
-from pydantic import BaseModel
+import logging
 
 from backend.app.core.database import get_db
 from backend.app.models.simulation import SimulationRun
 from backend.app.services.simulation_engine import SimulationEngine, SCENARIO_CONFIGS
+from backend.app.schemas.simulation import SimulationRunRequest
 
 router = APIRouter(prefix="/simulation", tags=["simulation"])
-
-class RunSimulationRequest(BaseModel):
-    scenario: str = "Scenario A"
-    dialing_mode: str = "PROGRESSIVE"
-    agent_count: int = 30
-    cycles: int = 4
-    provider_name: str = "mock_a"
-    seed: int = 42
+logger = logging.getLogger("smartdialer.api.simulation")
 
 @router.get("/scenarios")
 def list_available_scenarios():
@@ -28,7 +22,7 @@ def list_available_scenarios():
     ]
 
 @router.post("/run")
-def run_simulation(payload: RunSimulationRequest, db: Session = Depends(get_db)):
+def run_simulation(payload: SimulationRunRequest, db: Session = Depends(get_db)):
     try:
         run = SimulationEngine.run_simulation(
             db=db,
@@ -57,10 +51,11 @@ def run_simulation(payload: RunSimulationRequest, db: Session = Depends(get_db))
             "status": run.status
         }
     except Exception as ex:
-        raise HTTPException(status_code=500, detail=str(ex))
+        logger.exception("Simulation failed for scenario %s", payload.scenario)
+        raise HTTPException(status_code=500, detail="Unable to run simulation") from ex
 
 @router.get("/history")
-def list_simulations(limit: int = 10, db: Session = Depends(get_db)):
+def list_simulations(limit: int = Query(10, ge=1, le=100), db: Session = Depends(get_db)):
     runs = db.scalars(
         select(SimulationRun).order_by(desc(SimulationRun.created_at)).limit(limit)
     ).all()

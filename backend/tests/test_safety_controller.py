@@ -69,6 +69,51 @@ def test_safety_controller_zero_capacity_rejection(test_db):
     assert result.decision == SafetyDecisionType.REJECT
     assert result.approved_count == 0
 
+def test_safety_controller_does_not_double_count_reserved_agent_calls(test_db):
+    """
+    Calls already attached to reserved agents must not reduce the remaining
+    AVAILABLE agent capacity a second time.
+    """
+    for i in range(2):
+        test_db.add(Agent(
+            agent_id=f"AGT_BUSY_{i}",
+            agent_name=f"Busy Agent {i}",
+            status=AgentState.RESERVED.value
+        ))
+    for i in range(4):
+        test_db.add(Agent(
+            agent_id=f"AGT_FREE_{i}",
+            agent_name=f"Free Agent {i}",
+            status=AgentState.AVAILABLE.value
+        ))
+    test_db.add(Campaign(
+        campaign_id="CMP_SAFE_RESERVED",
+        campaign_name="Reserved Capacity Test",
+        max_concurrent_calls=50
+    ))
+    for i in range(2):
+        test_db.add(Call(
+            call_id=f"CALL_BUSY_{i}",
+            account_id=f"ACC_BUSY_{i}",
+            borrower_id=f"BRW_BUSY_{i}",
+            agent_id=f"AGT_BUSY_{i}",
+            campaign_id="CMP_SAFE_RESERVED",
+            state=CallState.RINGING.value
+        ))
+    test_db.commit()
+
+    result = SafetyController.evaluate_proposal(
+        db=test_db,
+        campaign_id="CMP_SAFE_RESERVED",
+        requested_count=4,
+        candidate_borrower_ids=[f"BRW_NEW_{i}" for i in range(4)],
+        provider_name="mock_a",
+        dialing_mode=DialingMode.PREDICTIVE
+    )
+
+    assert result.approved_count == 4
+    assert result.diagnostics["usable_agent_slots"] == 4
+
 def test_safety_controller_borrower_deduplication(test_db):
     """
     Candidate borrower already has a call IN_FLIGHT -> must be filtered out!

@@ -4,21 +4,21 @@ Agent Management API Router
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, update
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 
 from backend.app.core.database import get_db
 from backend.app.models.agent import Agent
 from backend.app.models.enums import AgentState
-from backend.app.services.agent_state_machine import AgentStateMachine
+from backend.app.services.agent_state_machine import AgentStateMachine, InvalidAgentStateTransition
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
 class AgentStatusUpdate(BaseModel):
-    status: str
+    status: AgentState
 
 class DisconnectBatchRequest(BaseModel):
-    count: int = 20
+    count: int = Field(default=20, ge=1, le=500)
 
 @router.get("")
 def list_agents(
@@ -61,14 +61,14 @@ def update_agent_status(agent_id: str, payload: AgentStatusUpdate, db: Session =
         raise HTTPException(status_code=404, detail="Agent not found")
     
     try:
-        updated = AgentStateMachine.transition(db, agent, payload.status.upper())
+        updated = AgentStateMachine.transition(db, agent, payload.status)
         return {
             "agent_id": updated.agent_id,
             "status": updated.status,
             "message": f"Agent status updated to {updated.status}"
         }
-    except Exception as ex:
-        raise HTTPException(status_code=400, detail=str(ex))
+    except InvalidAgentStateTransition as ex:
+        raise HTTPException(status_code=409, detail=str(ex)) from ex
 
 @router.post("/disconnect-batch")
 def simulate_agent_disconnection(payload: DisconnectBatchRequest, db: Session = Depends(get_db)):

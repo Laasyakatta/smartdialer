@@ -132,13 +132,30 @@ class SafetyController:
         # Available agents = in AVAILABLE state
         available_agents = db.scalar(
             select(func.count(Agent.agent_id))
-            .where(Agent.status == AgentState.AVAILABLE.value)
+            .where(
+                Agent.status == AgentState.AVAILABLE.value,
+                ~Agent.agent_id.in_(
+                    select(Call.agent_id).where(
+                        Call.agent_id.isnot(None),
+                        Call.state.in_(ACTIVE_CALL_STATES)
+                    )
+                )
+            )
         ) or 0
 
         # Outstanding pre-connected calls already launched and consuming capacity slots
         outstanding_calls = db.scalar(
             select(func.count(Call.call_id))
             .where(Call.state.in_(OUTSTANDING_PRE_CONNECT_STATES))
+        ) or 0
+
+        # A call without an assigned agent still consumes one of the free slots.
+        unassigned_outstanding_calls = db.scalar(
+            select(func.count(Call.call_id))
+            .where(
+                Call.state.in_(OUTSTANDING_PRE_CONNECT_STATES),
+                Call.agent_id.is_(None)
+            )
         ) or 0
 
         connected_calls = db.scalar(
@@ -148,10 +165,12 @@ class SafetyController:
 
         diagnostics["available_agents"] = available_agents
         diagnostics["outstanding_pre_connect_calls"] = outstanding_calls
+        diagnostics["unassigned_outstanding_calls"] = unassigned_outstanding_calls
         diagnostics["connected_calls"] = connected_calls
 
-        # Hard Capacity: Every initiated call MUST have a dedicated reserved agent capacity slot
-        usable_agent_slots = max(0, available_agents - outstanding_calls)
+        # Calls with reserved agents already reduce AVAILABLE; only unassigned calls
+        # need to be deducted from the remaining agent capacity.
+        usable_agent_slots = max(0, available_agents - unassigned_outstanding_calls)
         diagnostics["usable_agent_slots"] = usable_agent_slots
 
         if usable_agent_slots <= 0:

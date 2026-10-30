@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SmartDialer
 
 SmartDialer is a full-stack hiring assignment that demonstrates a collections
@@ -232,3 +233,6 @@ here before publishing if visual examples are desired.
 - [Dataset analysis](docs/dataset_analysis.md)
 - [Requirements checklist](docs/requirements_checklist.md)
 - [Local data setup](backend/data/README.md)
+=======
+# smartdialer
+>>>>>>> f2e827e95449e692dcacb7e51871bf1963191128
